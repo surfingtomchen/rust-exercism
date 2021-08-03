@@ -16,7 +16,6 @@ impl<T> Node<T> {
     }
 }
 
-#[derive(Default)]
 pub struct SimpleLinkedList<T> {
     head: Link<T>,
 }
