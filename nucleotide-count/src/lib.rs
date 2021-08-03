@@ -11,7 +11,7 @@ pub fn nucleotide_counts(dna: &str) -> Result<HashMap<char, usize>, char> {
                         |hashmap_result, c| {
                             hashmap_result.and_then(|mut hashmap| {
                                 if NUCLEOTIDE.contains(&c) {
-                                    *hashmap.entry(c).or_insert(0) += 1;
+                                    *hashmap.entry(c).or_default() += 1;
                                     Ok(hashmap)
                                 } else {
                                     Err(c)
