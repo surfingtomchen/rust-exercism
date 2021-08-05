@@ -46,21 +46,18 @@ impl Round {
 
     pub fn new(pins: u16, is_last: bool) -> Result<Self, Error> {
         match pins {
-            0..=9 => Ok(Self {
+            0..=10 => Ok(Self {
                 score: (pins, 0, 0),
-                status: One,
-                is_last,
-            }),
-            10 => Ok(Self {
-                score: (10, 0, 0),
-                status: Strike,
+                status: if pins == 10 { Strike } else { One },
                 is_last,
             }),
             _ => Err(NotEnoughPinsLeft),
         }
     }
 
-    pub fn add(&mut self, pins: u16) -> Result<bool, Error> {
+    /// # return 1 if score is full,
+    ///
+    pub fn add(&mut self, pins: u16) -> Result<u16, Error> {
         if pins > 10 {
             return Err(NotEnoughPinsLeft);
         }
@@ -73,7 +70,7 @@ impl Round {
                     self.score.1 = p;
                     if p + self.score.0 == 10 {
                         self.status = Spare;
-                        return Ok(false);
+                        return Ok(0);
                     }
                 }
             }
@@ -88,11 +85,11 @@ impl Round {
                 self.score.2 = p;
             }
             (StrikeFull, _) | (SpareFull, _) | (Two, _) => {
-                return Ok(true);
+                return Ok(1);
             }
         }
         self.status = self.status.next();
-        Ok(false)
+        Ok(0)
     }
 }
 
@@ -109,14 +106,17 @@ impl BowlingGame {
         match self.records.len() {
             0 => self.records.push(Round::new(pins, false)?),
             10 => {
-                let result: Vec<bool> = self
+                if self
                     .records
                     .iter_mut()
                     .rev()
                     .take(3)
                     .map(|r| r.add(pins))
-                    .collect::<Result<Vec<bool>, Error>>()?;
-                if 3 == result.iter().map(|x| if *x { 1 } else { 0 }).sum() {
+                    .collect::<Result<Vec<u16>, Error>>()?
+                    .iter()
+                    .sum::<u16>()
+                    == 3
+                {
                     return Err(GameComplete);
                 }
             }
@@ -128,17 +128,15 @@ impl BowlingGame {
                             .rev()
                             .take(2)
                             .map(|r| r.add(pins))
-                            .collect::<Result<Vec<bool>, Error>>()?;
+                            .collect::<Result<Vec<u16>, Error>>()?;
                         self.records.push(Round::new(pins, n == 9)?);
                     } else {
                         self.records
                             .iter_mut()
                             .rev()
-                            .skip(1)
-                            .take(2)
+                            .take(3)
                             .map(|r| r.add(pins))
-                            .collect::<Result<Vec<bool>, Error>>()?;
-                        self.records.last_mut().unwrap().add(pins)?;
+                            .collect::<Result<Vec<u16>, Error>>()?;
                     }
                 }
             }
