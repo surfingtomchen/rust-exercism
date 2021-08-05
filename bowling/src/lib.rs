@@ -8,14 +8,14 @@ pub enum Error {
 
 pub struct BowlingGame {
     scores: Vec<u16>,
-    is_new_round: bool,
+    is_new_frame: bool,
 }
 
 impl BowlingGame {
     pub fn new() -> Self {
         Self {
             scores: vec![],
-            is_new_round: true,
+            is_new_frame: true,
         }
     }
 
@@ -23,14 +23,14 @@ impl BowlingGame {
         if self.score().is_some() {
             return Err(GameComplete);
         }
-        if pins > 10 || !self.is_new_round && self.scores.last().unwrap() + pins > 10 {
+        if pins > 10 || !self.is_new_frame && self.scores.last().unwrap() + pins > 10 {
             return Err(NotEnoughPinsLeft);
         }
 
-        self.is_new_round = if self.is_new_round && pins == 10 {
+        self.is_new_frame = if self.is_new_frame && pins == 10 {
             true
         } else {
-            !self.is_new_round
+            !self.is_new_frame
         };
 
         self.scores.push(pins);
@@ -38,11 +38,11 @@ impl BowlingGame {
     }
 
     pub fn score(&self) -> Option<u16> {
-        let mut round = 0;
+        let mut frame = 0;
         let mut i = 0;
         let mut score = 0;
 
-        while round < 10 {
+        while frame < 10 {
             match (
                 self.scores.get(i),
                 self.scores.get(i + 1),
@@ -50,16 +50,13 @@ impl BowlingGame {
             ) {
                 (Some(10), Some(a), Some(b)) => {
                     score += 10 + a + b;
-                    round += 1;
                     i += 1;
                 }
                 (Some(a), Some(b), Some(c)) => {
+                    score += a + b;
                     if a + b == 10 {
-                        score += 10 + c;
-                    } else {
-                        score += a + b;
+                        score += c;
                     }
-                    round += 1;
                     i += 2;
                 }
                 (Some(a), Some(b), _) => {
@@ -67,13 +64,13 @@ impl BowlingGame {
                         return None;
                     }
                     score += a + b;
-                    round += 1;
                     i += 2;
                 }
                 (_, _, _) => {
                     return None;
                 }
             }
+            frame += 1;
         }
 
         Some(score)
