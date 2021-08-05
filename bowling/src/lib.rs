@@ -1,5 +1,5 @@
 use crate::Error::{GameComplete, NotEnoughPinsLeft};
-use crate::RoundStatus::{General, Incomplete, Spare, Strike};
+use crate::Status::{One, Spare, SpareFull, Strike, StrikeFull, StrikeNext, Two};
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
@@ -8,222 +8,152 @@ pub enum Error {
 }
 
 #[derive(PartialEq)]
-pub enum RoundStatus {
-    Incomplete,
-    General,
+pub enum Status {
+    One,
+    Two,
     Spare,
+    SpareFull,
     Strike,
+    StrikeNext,
+    StrikeFull,
 }
 
-pub fn is_valid(pins: u16) -> Result<u16, Error> {
-    if pins > 10 {
-        Err(NotEnoughPinsLeft)
-    } else {
-        Ok(pins)
-    }
-}
-
-pub struct BonusRound {
-    final_status: RoundStatus,
-    bonus: (Option<u16>, Option<u16>),
-}
-
-impl BonusRound {
-    pub fn new(pins: u16, final_status: RoundStatus) -> Result<Self, Error> {
-        is_valid(pins)?;
-        if final_status == RoundStatus::Incomplete || final_status == RoundStatus::General {
-            return Err(GameComplete);
-        }
-
-        Ok(Self {
-            final_status,
-            bonus: (Some(pins), None),
-        })
-    }
-
-    pub fn add(&mut self, pins: u16) -> Result<(), Error> {
-        is_valid(pins)?;
-
-        match (&self.final_status, self.bonus) {
-            (Strike, (Some(bonus_0), None)) => {
-                if bonus_0 != 10 && bonus_0 + pins > 10 {
-                    return Err(NotEnoughPinsLeft);
-                } else {
-                    self.bonus.1 = Some(pins);
-                }
-            }
-            (Strike, (None, None)) | (Spare, (None, None)) => self.bonus.0 = Some(pins),
-            (Spare, (Some(_), _)) | (Strike, (Some(_), Some(_))) => return Err(GameComplete),
-            _ => return Err(GameComplete),
-        }
-
-        Ok(())
-    }
-
-    pub fn score(&self, score: u16, first_factor: u16, second_factor: u16) -> Option<u16> {
-        match self.final_status {
-            Strike => self.bonus.0.and_then(|bonus_0| {
-                self.bonus.1.and_then(|bonus_1| {
-                    Some(score + bonus_0 * (first_factor - 1) + bonus_1 * (second_factor - 1))
-                })
-            }),
-            Spare => self
-                .bonus
-                .0
-                .and_then(|bonus_0| Some(score + bonus_0 * (first_factor - 1))),
-            _ => None,
+impl Status {
+    pub fn next(&self) -> Self {
+        match self {
+            Two | One => Two,
+            SpareFull | Spare => SpareFull,
+            Strike => StrikeNext,
+            StrikeFull | StrikeNext => StrikeFull,
         }
     }
 }
 
-pub struct Round(u16, Option<u16>);
+pub struct Round {
+    score: (u16, u16, u16),
+    status: Status,
+    is_last: bool,
+}
 
 impl Round {
-    pub fn new(pins: u16) -> Result<Self, Error> {
+    pub fn score(&self) -> Option<u16> {
+        match &self.status {
+            One | Strike | StrikeNext | Spare => None,
+            Two => Some(self.score.0 + self.score.1),
+            StrikeFull | SpareFull => Some(self.score.0 + self.score.1 + self.score.2),
+        }
+    }
+
+    pub fn new(pins: u16, is_last: bool) -> Result<Self, Error> {
         match pins {
-            10 => Ok(Self(10, Some(0))),
-            0..=9 => Ok(Self(pins, None)),
-            _ => Err(Error::NotEnoughPinsLeft),
-        }
-    }
-
-    pub fn accumulated_score(
-        &self,
-        last_score: Option<u16>,
-        first_factor: u16,
-        second_factor: u16,
-    ) -> (Option<u16>, u16, u16) {
-        if let Some(score) = last_score {
-            match self.status() {
-                Incomplete => (None, 0, 0),
-                Strike => (Some(score + self.0 * first_factor), second_factor + 1, 2),
-                Spare => (
-                    Some(score + self.0 * first_factor + self.1.unwrap_or(0) * second_factor),
-                    2,
-                    1,
-                ),
-                General => (
-                    Some(score + self.0 * first_factor + self.1.unwrap_or(0) * second_factor),
-                    1,
-                    1,
-                ),
-            }
-        } else {
-            (None, 0, 0)
-        }
-    }
-
-    pub fn round_complete(&self) -> bool {
-        self.1.is_some()
-    }
-
-    pub fn pins_10(&self) -> bool {
-        self.0 + self.1.unwrap_or(0) == 10
-    }
-
-    pub fn status(&self) -> RoundStatus {
-        match (self.0, self.1) {
-            (_, None) => Incomplete,
-            (10, Some(0)) => Strike,
-            (a, Some(b)) => {
-                if a + b == 10 {
-                    Spare
-                } else {
-                    General
-                }
-            }
-        }
-    }
-
-    pub fn add(&mut self, pins: u16) -> Result<(), Error> {
-        match self.status() {
-            Incomplete => {
-                if self.0 + pins > 10 {
-                    Err(NotEnoughPinsLeft)
-                } else {
-                    self.1 = Some(pins);
-                    Ok(())
-                }
-            }
+            0..=9 => Ok(Self {
+                score: (pins, 0, 0),
+                status: One,
+                is_last,
+            }),
+            10 => Ok(Self {
+                score: (10, 0, 0),
+                status: Strike,
+                is_last,
+            }),
             _ => Err(NotEnoughPinsLeft),
         }
+    }
+
+    pub fn add(&mut self, pins: u16) -> Result<bool, Error> {
+        if pins > 10 {
+            return Err(NotEnoughPinsLeft);
+        }
+
+        match (&self.status, pins) {
+            (One, p) => {
+                if p + self.score.0 > 10 {
+                    return Err(NotEnoughPinsLeft);
+                } else {
+                    self.score.1 = p;
+                    if p + self.score.0 == 10 {
+                        self.status = Spare;
+                        return Ok(false);
+                    }
+                }
+            }
+            (Strike, p) => self.score.1 = p,
+            (StrikeNext, p) => {
+                if self.is_last && self.score.1 != 10 && self.score.1 + p > 10 {
+                    return Err(NotEnoughPinsLeft);
+                }
+                self.score.2 = p;
+            }
+            (Spare, p) => {
+                self.score.2 = p;
+            }
+            (StrikeFull, _) | (SpareFull, _) | (Two, _) => {
+                return Ok(true);
+            }
+        }
+        self.status = self.status.next();
+        Ok(false)
     }
 }
 
 pub struct BowlingGame {
     records: Vec<Round>,
-    bonus: Option<BonusRound>,
 }
 
 impl BowlingGame {
     pub fn new() -> Self {
-        Self {
-            records: vec![],
-            bonus: None,
-        }
+        Self { records: vec![] }
     }
 
     pub fn roll(&mut self, pins: u16) -> Result<(), Error> {
         match self.records.len() {
+            0 => self.records.push(Round::new(pins, false)?),
             10 => {
-                if let Some(last) = self.records.last_mut() {
-                    match last.status() {
-                        Incomplete => last.add(pins),
-                        General => Err(GameComplete),
-                        s => {
-                            if let Some(bonus) = &mut self.bonus {
-                                bonus.add(pins)
-                            } else {
-                                self.bonus = Some(BonusRound::new(pins, s)?);
-                                Ok(())
-                            }
-                        }
-                    }
-                } else {
-                    unreachable!()
+                let result: Vec<bool> = self
+                    .records
+                    .iter_mut()
+                    .rev()
+                    .take(3)
+                    .map(|r| r.add(pins))
+                    .collect::<Result<Vec<bool>, Error>>()?;
+                if 3 == result.iter().map(|x| if *x { 1 } else { 0 }).sum() {
+                    return Err(GameComplete);
                 }
             }
-            _ => {
-                if let Some(last) = self.records.last_mut() {
-                    if last.round_complete() {
-                        self.records.push(Round::new(pins)?);
-                        Ok(())
+            n => {
+                if let Some(last) = self.records.last() {
+                    if last.status != One {
+                        self.records
+                            .iter_mut()
+                            .rev()
+                            .take(2)
+                            .map(|r| r.add(pins))
+                            .collect::<Result<Vec<bool>, Error>>()?;
+                        self.records.push(Round::new(pins, n == 9)?);
                     } else {
-                        last.add(pins)
+                        self.records
+                            .iter_mut()
+                            .rev()
+                            .skip(1)
+                            .take(2)
+                            .map(|r| r.add(pins))
+                            .collect::<Result<Vec<bool>, Error>>()?;
+                        self.records.last_mut().unwrap().add(pins)?;
                     }
-                } else {
-                    self.records.push(Round::new(pins)?);
-                    Ok(())
                 }
             }
         }
+
+        Ok(())
     }
 
     pub fn score(&self) -> Option<u16> {
-        match self.records.len() {
-            10 => {
-                let (score, first, second) = self.records.iter().fold(
-                    (Some(0), 1, 1),
-                    |(score, first_factor, second_factor), this_round| {
-                        this_round.accumulated_score(score, first_factor, second_factor)
-                    },
-                );
-
-                score.and_then(|score| {
-                    if let Some(last) = self.records.last() {
-                        if let Some(bonus) = &self.bonus {
-                            bonus.score(score, first, second)
-                        } else if last.pins_10() {
-                            None
-                        } else {
-                            Some(score)
-                        }
-                    } else {
-                        None
-                    }
-                })
-            }
-            _ => None,
+        if self.records.len() < 10 {
+            return None;
         }
+        self.records.iter().fold(Some(0), |score, r| {
+            r.score()
+                .and_then(|r_score| score.and_then(|s| Some(s + r_score)))
+        })
     }
 }
