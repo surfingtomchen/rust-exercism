@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Bucket {
     One,
@@ -28,107 +26,99 @@ impl BucketStats {
     }
 }
 
-pub struct Status {
-    pub buckets: (u8, u8),
-    pub capacity: (u8, u8),
-    pub moves: u8,
-    pub goal: u8,
-    pub start: Bucket,
-    pub answer: Option<BucketStats>,
+#[derive(Eq, Ord, PartialOrd, PartialEq, Clone)]
+pub struct State(u8, u8);
+
+impl State {
+    pub fn next_states(&self, capacity: (u8, u8), start: Bucket, stack: &Vec<State>) -> Vec<State> {
+        let sum = self.1 + self.0;
+        vec![
+            Self(0, self.1),
+            Self(self.0, 0),
+            Self(capacity.0, self.1),
+            Self(self.0, capacity.1),
+            if sum > capacity.1 {
+                Self(sum - capacity.1, capacity.1)
+            } else {
+                Self(0, sum)
+            },
+            if sum > capacity.0 {
+                Self(capacity.0, sum - capacity.0)
+            } else {
+                Self(sum, 0)
+            },
+        ]
+        .into_iter()
+        .filter(|x| {
+            *x != State(0, 0)
+                && x != self
+                && (start == Bucket::One && *x != State(0, capacity.1)
+                    || start == Bucket::Two && *x != State(capacity.0, 0))
+                && !stack.contains(&*x)
+        })
+        .collect()
+    }
 }
 
-impl Status {
-    pub fn new(capacity: (u8, u8), goal: u8, start: &Bucket) -> Self {
+pub struct DFS {
+    pub capacity: (u8, u8),
+    pub goal: u8,
+    pub start_bucket: Bucket,
+    pub stats: Option<BucketStats>,
+    pub stack: Vec<State>,
+}
+
+impl DFS {
+    pub fn new(capacity: (u8, u8), goal: u8, start_bucket: &Bucket) -> Self {
+        let mut vec = vec![];
+        if *start_bucket == Bucket::One {
+            vec.push(State(capacity.0, 0));
+        } else {
+            vec.push(State(0, capacity.1));
+        }
+
         Self {
-            buckets: (0, 0),
             capacity,
-            moves: 0,
             goal,
-            start: start.clone(),
-            answer: None,
+            start_bucket: start_bucket.clone(),
+            stats: None,
+            stack: vec,
         }
     }
 
-    pub fn next_status(&self, i: u8) -> Option<(u8, u8)> {
-        let result = match i {
-            0 => (self.buckets.0 != 0).then(|| (0, self.buckets.1)),
-            1 => (self.buckets.1 != 0).then(|| (self.buckets.0, 0)),
-            2 => (self.buckets.0 != self.capacity.0).then(|| (self.capacity.0, self.buckets.1)),
-            3 => (self.buckets.1 != self.capacity.1).then(|| (self.buckets.0, self.capacity.1)),
-            4 => {
-                if self.buckets.0 == 0 || self.buckets.1 == self.capacity.1 {
-                    return None;
-                }
-                let sum = self.buckets.1 + self.buckets.0;
-                if sum > self.capacity.1 {
-                    Some((sum - self.capacity.1, self.capacity.1))
-                } else {
-                    Some((0, sum))
+    pub fn check_goal(&mut self, state: &State) -> bool {
+        if state.0 == self.goal || state.1 == self.goal {
+            if let Some(answer) = &self.stats {
+                if answer.moves < self.stack.len() as u8 {
+                    return true;
                 }
             }
-            _ => {
-                if self.buckets.1 == 0 || self.buckets.0 == self.capacity.0 {
-                    return None;
-                }
-                let sum = self.buckets.1 + self.buckets.0;
-                if sum > self.capacity.0 {
-                    Some((self.capacity.0, sum - self.capacity.0))
-                } else {
-                    Some((sum, 0))
-                }
-            }
-        };
-        if self.start == Bucket::Two && (self.buckets.0, self.buckets.1) == (self.capacity.0, 0) {
-            return None;
-        } else if self.start == Bucket::One && (self.buckets.0, self.buckets.1) == (0, self.capacity.1) {
-            return None;
-        } else {
-            result
-        }
-    }
-
-    pub fn change_to_status(&mut self, start: &Bucket) {
-        self.moves += 1;
-        if start == &Bucket::One {
-            self.buckets = self.next_status(2).unwrap();
-        } else {
-            self.buckets = self.next_status(3).unwrap();
-        }
-    }
-
-    pub fn find(&mut self, stored_status: &mut HashSet<(u8, u8)>) {
-        if self.buckets.0 == self.goal || self.buckets.1 == self.goal {
-            let potential_answer = BucketStats::new(
-                self.moves,
-                if self.buckets.0 == self.goal {
+            self.stats = Some(BucketStats::new(
+                self.stack.len() as u8,
+                if state.0 == self.goal {
                     Bucket::One
                 } else {
                     Bucket::Two
                 },
-                self.buckets.1 + self.buckets.0 - self.goal);
-            if let Some(answer) = &self.answer {
-                if answer.moves < self.moves {
-                    return;
-                }
-            }
-            self.answer = Some(potential_answer);
+                state.1 + state.0 - self.goal,
+            ));
+            return true;
+        }
+
+        false
+    }
+
+    pub fn search(&mut self) {
+        let one_state = self.stack.last().unwrap().clone();
+        if self.check_goal(&one_state) {
             return;
         }
 
-        for i in 0..6 {
-            if let Some(next) = self.next_status(i) {
-                if stored_status.contains(&next) {
-                    continue;
-                }
-                let old = self.buckets;
-                self.buckets = next;
-                self.moves += 1;
-                stored_status.insert(self.buckets);
-                self.find(stored_status);
-                stored_status.remove(&self.buckets);
-                self.buckets = old;
-                self.moves -= 1;
-            }
+        let states = one_state.next_states(self.capacity, self.start_bucket.clone(), &self.stack);
+        for next in states {
+            self.stack.push(next);
+            self.search();
+            self.stack.pop();
         }
     }
 }
@@ -140,15 +130,7 @@ pub fn solve(
     goal: u8,
     start_bucket: &Bucket,
 ) -> Option<BucketStats> {
-    let mut stored_status: HashSet<(u8, u8)> = HashSet::new();
-    let mut status = Status::new((capacity_1, capacity_2), goal, start_bucket);
-    status.change_to_status(start_bucket);
-    stored_status.insert((0, 0));
-    if start_bucket == &Bucket::Two {
-        stored_status.insert((0, capacity_2));
-    } else {
-        stored_status.insert((capacity_1, 0));
-    }
-    status.find(&mut stored_status);
-    status.answer
+    let mut dfs = DFS::new((capacity_1, capacity_2), goal, start_bucket);
+    dfs.search();
+    dfs.stats
 }
