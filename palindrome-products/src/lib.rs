@@ -33,27 +33,38 @@ impl Palindrome {
 }
 
 pub fn palindrome_products(min: u64, max: u64) -> Option<(Palindrome, Palindrome)> {
-    if min > max { return None; }
+    if min > max {
+        return None;
+    }
 
     let result: Option<(Palindrome, Palindrome)> = None;
-    (min..=max).into_iter().flat_map(|x| (min..=max).into_iter().filter(|y| *y >= x).map(|y| (x * y, x, y)).collect::<Vec<(u64, u64, u64)>>())
-               .filter(|(n, _, _)| Palindrome::is_palindrome(n)).fold(result, |result, (n, x, y)| {
-        if let Some((mut min, mut max)) = result {
-            if min.value > n {
-                min = Palindrome::new(x, y);
-            } else if min.value == n {
-                min.insert(x, y);
-            }
+    (min..=max)
+        .into_iter()
+        .flat_map(|x| {
+            (min..=max)
+                .into_iter()
+                .filter(|y| *y >= x)
+                .map(|y| (x * y, x, y))
+                .collect::<Vec<(u64, u64, u64)>>()
+        })
+        .filter(|(n, _, _)| Palindrome::is_palindrome(n))
+        .fold(result, |result, (n, x, y)| {
+            if let Some((mut min, mut max)) = result {
+                if min.value > n {
+                    min = Palindrome::new(x, y);
+                } else if min.value == n {
+                    min.insert(x, y);
+                }
 
-            if max.value < n {
-                max = Palindrome::new(x, y);
-            } else if max.value == n {
-                max.insert(x, y);
-            }
+                if max.value < n {
+                    max = Palindrome::new(x, y);
+                } else if max.value == n {
+                    max.insert(x, y);
+                }
 
-            Some((min, max))
-        } else {
-            Some((Palindrome::new(x, y), Palindrome::new(x, y)))
-        }
-    })
+                Some((min, max))
+            } else {
+                Some((Palindrome::new(x, y), Palindrome::new(x, y)))
+            }
+        })
 }
