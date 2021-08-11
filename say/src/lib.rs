@@ -1,91 +1,40 @@
-use std::iter;
-
 pub fn encode(n: u64) -> String {
-    if n == 0 {
-        return "zero".to_string();
-    };
-    let mut x = n;
-    let mut v = (0..7)
-        .into_iter()
-        .map(|i| {
-            let a = x % 1000;
-            x = x / 1000;
-            encode_less_than_1000(a, i as usize)
-        })
-        .filter(|x| *x != "")
-        .collect::<Vec<String>>();
-    v.reverse();
-    v.join(" ").trim().to_string()
-}
-
-pub fn encode_less_than_1000(remainder: u64, base: usize) -> String {
-    if remainder == 0 {
-        return "".to_string();
-    }
-
-    let pre: Vec<&str> = vec![
-        "",
-        " one",
-        " two",
-        " three",
-        " four",
-        " five",
-        " six",
-        " seven",
-        " eight",
-        " nine",
-        " ten",
-        " eleven",
-        " twelve",
-        " thirteen",
-        " fourteen",
-        " fifteen",
-        " sixteen",
-        " seventeen",
-        " eighteen",
-        " nineteen",
-    ];
-    let tens: Vec<&str> = vec![
-        "", "", " twenty", " thirty", " forty", " fifty", " sixty", " seventy", " eighty",
-        " ninety",
-    ];
-    let hundred = iter::once("")
-        .chain(iter::repeat(" hundred").take(9))
-        .collect::<Vec<&str>>();
-    let thousand_base: Vec<&str> = vec![
-        "",
-        " thousand",
-        " million",
-        " billion",
-        " trillion",
-        " quadrillion",
-        " quintillion",
-    ];
-
-    let within_hundred = pre
-        .iter()
-        .map(|x| x.to_owned().to_owned())
-        .chain((2..10).into_iter().flat_map(|x| {
-            iter::repeat(tens[x])
-                .take(10)
-                .zip(pre.iter().take(10))
-                .map(|(x, y)| {
-                    if !y.is_empty() {
-                        format!("{}-{}", x, y.trim())
-                    } else {
-                        x.to_string()
-                    }
-                })
-        }))
-        .collect::<Vec<String>>();
-
-    format!(
-        "{}{}{}{}",
-        pre[(remainder / 100) as usize],
-        hundred[(remainder / 100) as usize],
-        within_hundred[(remainder % 100) as usize],
-        thousand_base[base]
-    )
-    .trim()
-    .to_string()
+    match n {
+        0 => String::from("zero"),
+        1 => String::from("one"),
+        2 => String::from("two"),
+        3 => String::from("three"),
+        4 => String::from("four"),
+        5 => String::from("five"),
+        6 => String::from("six"),
+        7 => String::from("seven"),
+        8 => String::from("eight"),
+        9 => String::from("nine"),
+        10 => String::from("ten"),
+        11 => String::from("eleven"),
+        12 => String::from("twelve"),
+        13 => String::from("thirteen"),
+        14 => String::from("fourteen"),
+        15 => String::from("fifteen"),
+        16 => String::from("sixteen"),
+        17 => String::from("seventeen"),
+        18 => String::from("eighteen"),
+        19 => String::from("nineteen"),
+        20 => String::from("twenty"),
+        30 => String::from("thirty"),
+        40 => String::from("forty"),
+        50 => String::from("fifty"),
+        60 => String::from("sixty"),
+        70 => String::from("seventy"),
+        80 => String::from("eighty"),
+        90 => String::from("ninety"),
+        21..=99 => format!("{}-{}", encode(n - n % 10), encode(n % 10)),
+        100..=999 => format!("{} hundred {}", encode(n / 100), encode(n % 100)),
+        1_000..=999_999 => format!("{} thousand {}", encode(n / 1000), encode(n % 1000)),
+        1_000_000..=999_999_999 => format!("{} million {}", encode(n / 1_000_000), encode(n % 1_000_000)),
+        1_000_000_000..=999_999_999_999 => format!("{} billion {}", encode(n / 1_000_000_000), encode(n % 1_000_000_000)),
+        1_000_000_000_000..=999_999_999_999_999 => format!("{} trillion {}", encode(n / 1_000_000_000_000), encode(n % 1_000_000_000_000)),
+        1_000_000_000_000_000..=999_999_999_999_999_999 => format!("{} quadrillion {}", encode(n / 1_000_000_000_000_000), encode(n % 1_000_000_000_000_000)),
+        1_000_000_000_000_000_000..=u64::MAX => format!("{} quintillion {}", encode(n / 1_000_000_000_000_000_000), encode(n % 1_000_000_000_000_000_000)),
+    }.to_string().replace(" zero", "")
 }
