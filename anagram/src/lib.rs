@@ -10,8 +10,8 @@ pub fn hash(word: &str) -> (u64, u64) {
         let u = match ch {
             'a'..='z' => ch as u8 + 1 - b'a',
             'A'..='Z' => ch as u8 + 1 - b'A',
-            'Α'..='Ω' => (ch as u32 + 1 - 0x0391) as u8 + 26,
-            'α'..='ω' => (ch as u32 + 1 - 0x03B1) as u8 + 26,
+            'Α'..='Ω' => (ch as u32 - 0x0391) as u8 + 27,
+            'α'..='ω' => (ch as u32 - 0x03B1) as u8 + 27,
             _ => 0,
         };
         (
