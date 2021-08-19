@@ -36,6 +36,7 @@ where
     values: HashMap<CellID, T>,
     funcs: HashMap<CellID, Box<dyn Fn(&[T]) -> T>>,
     callbacks: Vec<(CellID, CallbackID, Callback<'a, T>, bool)>,
+    changed_cell: HashMap<CellID, T>,
 }
 
 impl<'a, T: Copy + PartialEq> Reactor<'a, T> {
@@ -47,6 +48,7 @@ impl<'a, T: Copy + PartialEq> Reactor<'a, T> {
             values: HashMap::new(),
             funcs: HashMap::new(),
             callbacks: vec![],
+            changed_cell: HashMap::new(),
         }
     }
 
@@ -130,19 +132,23 @@ impl<'a, T: Copy + PartialEq> Reactor<'a, T> {
 
     pub fn set_value(&mut self, id: InputCellID, new_value: T) -> bool {
         if self.cells.iter().any(|(i, _)| *i == CellID::Input(id)) {
-            let old_values = self.values.clone();
+            self.changed_cell.clear();
+
             self.set_cell_value_recursively(CellID::Input(id), new_value);
-            self.values.iter().for_each(|(id, new)| {
-                if old_values.get(id) != Some(new) {
+
+            self.changed_cell.iter().for_each(|(cell_id, old_value)| {
+                let new_value = self.values.get(cell_id).unwrap();
+                if old_value != new_value {
                     self.callbacks
                         .iter()
-                        .for_each(|(cell_id, _, callback, enabled)| {
+                        .for_each(|(id, _, callback, enabled)| {
                             if *cell_id == *id && *enabled {
-                                callback.borrow_mut().deref_mut()(*new);
+                                callback.borrow_mut().deref_mut()(*new_value);
                             }
                         });
                 }
             });
+
             true
         } else {
             false
@@ -153,6 +159,10 @@ impl<'a, T: Copy + PartialEq> Reactor<'a, T> {
         if let Some(value) = self.values.get(&id) {
             if *value == new_value {
                 return;
+            } else {
+                if !self.changed_cell.contains_key(&id) {
+                    self.changed_cell.insert(id, *value);
+                }
             }
         }
 
