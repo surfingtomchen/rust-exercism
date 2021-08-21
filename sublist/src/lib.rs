@@ -11,9 +11,27 @@ pub enum Comparison {
 
 pub fn sublist<T: PartialEq>(first_list: &[T], second_list: &[T]) -> Comparison {
     match first_list.len().cmp(&second_list.len()) {
-        Ordering::Less => if contains(second_list, first_list) { Sublist } else { Unequal }
-        Ordering::Equal => if first_list == second_list { Equal } else { Unequal },
-        Ordering::Greater => if contains(first_list, second_list) { Superlist } else { Unequal }
+        Ordering::Less => {
+            if contains(second_list, first_list) {
+                Sublist
+            } else {
+                Unequal
+            }
+        }
+        Ordering::Equal => {
+            if first_list == second_list {
+                Equal
+            } else {
+                Unequal
+            }
+        }
+        Ordering::Greater => {
+            if contains(first_list, second_list) {
+                Superlist
+            } else {
+                Unequal
+            }
+        }
     }
 }
 
