@@ -1,0 +1,12 @@
+/Users/tom/Exercism/rust/xorcism/target/debug/deps/proc_macro2-cb7b6bf9183cc115.rmeta: /Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/lib.rs /Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/marker.rs /Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/parse.rs /Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/detection.rs /Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/fallback.rs /Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/wrapper.rs
+
+/Users/tom/Exercism/rust/xorcism/target/debug/deps/libproc_macro2-cb7b6bf9183cc115.rlib: /Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/lib.rs /Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/marker.rs /Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/parse.rs /Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/detection.rs /Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/fallback.rs /Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/wrapper.rs
+
+/Users/tom/Exercism/rust/xorcism/target/debug/deps/proc_macro2-cb7b6bf9183cc115.d: /Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/lib.rs /Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/marker.rs /Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/parse.rs /Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/detection.rs /Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/fallback.rs /Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/wrapper.rs
+
+/Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/lib.rs:
+/Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/marker.rs:
+/Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/parse.rs:
+/Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/detection.rs:
+/Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/fallback.rs:
+/Users/tom/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.28/src/wrapper.rs:
