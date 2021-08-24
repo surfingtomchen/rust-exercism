@@ -1,5 +1,5 @@
 use std::borrow::Borrow;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::iter::Cycle;
 use std::slice::Iter;
 
@@ -19,22 +19,11 @@ impl<'a> Xorcism<'a> {
         }
     }
 
-    /// XOR each byte of the input buffer with a byte from the key.
-    ///
-    /// Note that this is stateful: repeated calls are likely to produce different results,
-    /// even with identical inputs.
     pub fn munge_in_place(&mut self, data: &mut [u8]) {
         data.iter_mut()
             .for_each(|d| *d = *d ^ self.key.next().unwrap());
     }
 
-    /// XOR each byte of the data with a byte from the key.
-    ///
-    /// Note that this is stateful: repeated calls are likely to produce different results,
-    /// even with identical inputs.
-    ///
-    /// Should accept anything which has a cheap conversion to a byte iterator.
-    /// Shouldn't matter whether the byte iterator's values are owned or borrowed.
     pub fn munge<'b, T, Data>(
         &'b mut self,
         data: Data,
@@ -46,7 +35,60 @@ impl<'a> Xorcism<'a> {
         data.into_iter()
             .map(move |d| d.borrow() ^ self.key.next().unwrap())
     }
+
+    #[cfg(feature = "io")]
+    pub fn reader(self, reader: impl Read + 'a) -> impl Read + 'a {
+        XorcimReaderWriter::new(reader, self)
+    }
+
+    #[cfg(feature = "io")]
+    pub fn writer(self, writer: impl Write + 'a) -> impl Write + 'a {
+        XorcimReaderWriter::new(writer, self)
+    }
 }
 
 pub trait Captures<'a> {}
+
 impl<'a, T: ?Sized> Captures<'a> for T {}
+
+#[cfg(feature = "io")]
+struct XorcimReaderWriter<'a, Inner> {
+    inner: Inner,
+    munger: Xorcism<'a>,
+    buf: Vec<u8>,
+}
+
+#[cfg(feature = "io")]
+impl<'a, R> XorcimReaderWriter<'a, R> {
+    pub fn new(inner: R, m: Xorcism<'a>) -> Self {
+        Self {
+            inner,
+            munger: m,
+            buf: vec![],
+        }
+    }
+}
+
+#[cfg(feature = "io")]
+impl<'a, R: Read> Read for XorcimReaderWriter<'a, R> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.inner.read(buf).map(|n| {
+            self.munger.munge_in_place(&mut buf[..n]);
+            n
+        })
+    }
+}
+
+#[cfg(feature = "io")]
+impl<'a, W: Write> Write for XorcimReaderWriter<'a, W> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.buf.extend(self.munger.munge(buf));
+        let bytes = self.inner.write(&self.buf)?;
+        self.buf.clear();
+        Ok(bytes)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
+}
