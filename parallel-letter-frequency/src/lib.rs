@@ -9,13 +9,13 @@ pub fn frequency(input: &[&str], worker_count: usize) -> HashMap<char, usize> {
     for lines in input.chunks(input.len() / worker_count + 1) {
         let map = Arc::clone(&result);
         let mut v = vec![];
-        lines.iter().for_each(|line| v.push(line.to_lowercase()));
+        lines.iter().for_each(|&line| v.push(line.to_owned()));
 
         handles.push(thread::spawn(move || {
             let mut worker_result: HashMap<char, usize> = HashMap::new();
             v.iter().for_each(|line| {
                 line.chars().filter(|c| c.is_alphabetic()).for_each(|c| {
-                    *worker_result.entry(c).or_insert(0) += 1;
+                    *worker_result.entry(c.to_ascii_lowercase()).or_insert(0) += 1;
                 })
             });
             let mut r = map.lock().unwrap();
